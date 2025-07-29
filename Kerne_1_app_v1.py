@@ -6,9 +6,11 @@ import io
 from PIL import Image
 
 uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
+
 if uploaded_file:
     pil_img = Image.open(uploaded_file).convert("RGB")
 
+    # Canvas vorbereiten
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG")
     byte_img = buf.getvalue()
@@ -24,17 +26,16 @@ if uploaded_file:
         key="zoi"
     )
 
-    # Ausgewählte Zone extrahieren…
-
-if canvas_result.json_data:
-    objects = canvas_result.json_data["objects"]
-    if objects:
-        obj = objects[-1]  # letztes gezeichnetes Objekt
-        x, y = int(obj["left"]), int(obj["top"])
-        w, h = int(obj["width"]), int(obj["height"])
-        roi = image_np[y:y+h, x:x+w]
-
-        st.image(roi, caption="🎯 Ausgewählte Zone of Interest (ZOI)")
+    # ✅ canvas_result ist definiert: Jetzt kann man darauf zugreifen
+    if canvas_result.json_data:
+        objects = canvas_result.json_data["objects"]
+        if objects:
+            obj = objects[-1]
+            x, y = int(obj["left"]), int(obj["top"])
+            w, h = int(obj["width"]), int(obj["height"])
+            image_np = np.array(pil_img)
+            roi = image_np[y:y+h, x:x+w]
+            st.image(roi, caption="🎯 Ausgewählte Zone of Interest (ZOI)")
 
 
 # 🧭 Seiteneinstellungen
