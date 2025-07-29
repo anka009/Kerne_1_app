@@ -18,6 +18,16 @@ if uploaded_file:
         image = cv2.imdecode(file_bytes, 1)
 
     st.image(image, caption="📷 Originalbild", channels="BGR")
+# Konvertierung zu Graustufen
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Anzeige der Graustufenversion
+st.image(gray_image, caption="🖤 Graustufenbild", channels="GRAY")
+ansicht = st.radio("🔍 Bildanzeige:", ["Farbe", "Graustufen"])
+if ansicht == "Farbe":
+    st.image(image, caption="Originalbild", channels="BGR")
+else:
+    st.image(gray_image, caption="Graustufenbild", channels="GRAY")
 
     # 🎚️ Schwellenwerte für Canny-Kanten
     st.sidebar.header("🧪 Einstellungen")
