@@ -30,15 +30,15 @@ canvas_result = st_canvas(
     key="zoi"
 )
 
-    if canvas_result.json_data:
-        objects = canvas_result.json_data["objects"]
-        if objects:
-            obj = objects[-1]  # letztes gezeichnetes Objekt
-            x, y = int(obj["left"]), int(obj["top"])
-            w, h = int(obj["width"]), int(obj["height"])
-            roi = image_np[y:y+h, x:x+w]
+if canvas_result.json_data:
+    objects = canvas_result.json_data["objects"]
+    if objects:
+        obj = objects[-1]  # letztes gezeichnetes Objekt
+        x, y = int(obj["left"]), int(obj["top"])
+        w, h = int(obj["width"]), int(obj["height"])
+        roi = image_np[y:y+h, x:x+w]
 
-            st.image(roi, caption="🎯 Ausgewählte Zone of Interest (ZOI)")
+        st.image(roi, caption="🎯 Ausgewählte Zone of Interest (ZOI)")
 
 
 # 🧭 Seiteneinstellungen
