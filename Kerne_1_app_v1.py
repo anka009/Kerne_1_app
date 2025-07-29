@@ -2,33 +2,29 @@ from streamlit_drawable_canvas import st_canvas
 import streamlit as st
 import cv2
 import numpy as np
+import io
 from PIL import Image
 
-# Bild laden
 uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
 if uploaded_file:
     pil_img = Image.open(uploaded_file).convert("RGB")
-    image_np = np.array(pil_img)
 
-    st.write("🔲 Ziehe ein Rechteck über die gewünschte Zone im Bild:")
+    buf = io.BytesIO()
+    pil_img.save(buf, format="PNG")
+    byte_img = buf.getvalue()
 
-import io
+    canvas_result = st_canvas(
+        fill_color="rgba(255, 0, 0, 0.3)",
+        stroke_width=2,
+        background_image=Image.open(io.BytesIO(byte_img)),
+        update_streamlit=True,
+        height=pil_img.height,
+        width=pil_img.width,
+        drawing_mode="rect",
+        key="zoi"
+    )
 
-# 🧠 PIL-Bild in Bytes konvertieren
-buf = io.BytesIO()
-pil_img.save(buf, format="PNG")
-byte_img = buf.getvalue()
-
-canvas_result = st_canvas(
-    fill_color="rgba(255, 0, 0, 0.3)",
-    stroke_width=2,
-    background_image=Image.open(io.BytesIO(byte_img)),
-    update_streamlit=True,
-    height=pil_img.height,
-    width=pil_img.width,
-    drawing_mode="rect",
-    key="zoi"
-)
+    # Ausgewählte Zone extrahieren…
 
 if canvas_result.json_data:
     objects = canvas_result.json_data["objects"]
