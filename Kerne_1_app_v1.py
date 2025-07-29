@@ -1,7 +1,38 @@
+from streamlit_drawable_canvas import st_canvas
+import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
-import streamlit as st
+
+# Bild laden
+uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
+if uploaded_file:
+    pil_img = Image.open(uploaded_file).convert("RGB")
+    image_np = np.array(pil_img)
+
+    st.write("🔲 Ziehe ein Rechteck über die gewünschte Zone im Bild:")
+
+    canvas_result = st_canvas(
+        fill_color="rgba(255, 0, 0, 0.3)",  # transparentes Rot
+        stroke_width=2,
+        background_image=pil_img,
+        update_streamlit=True,
+        height=image_np.shape[0],
+        width=image_np.shape[1],
+        drawing_mode="rect",
+        key="zoi"
+    )
+
+    if canvas_result.json_data:
+        objects = canvas_result.json_data["objects"]
+        if objects:
+            obj = objects[-1]  # letztes gezeichnetes Objekt
+            x, y = int(obj["left"]), int(obj["top"])
+            w, h = int(obj["width"]), int(obj["height"])
+            roi = image_np[y:y+h, x:x+w]
+
+            st.image(roi, caption="🎯 Ausgewählte Zone of Interest (ZOI)")
+
 
 # 🧭 Seiteneinstellungen
 st.set_page_config(page_title="🧬 Konturen entfernen", layout="centered")
