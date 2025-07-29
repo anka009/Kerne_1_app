@@ -24,6 +24,13 @@ def classify_color(masked_image):
         return 'unklar'
 
 # 🖼️ Bildanalyse-Funktion
+def enhance_contrast_and_brightness(image):
+    # Beispielhafte Kontrast- & Helligkeitsanpassung mit OpenCV
+    alpha = 1.5  # Kontrast
+    beta = 20    # Helligkeit
+    enhanced = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+    return enhanced
+
 def analyze_image(pil_img):
     image = np.array(pil_img)
     if image.ndim == 2:
