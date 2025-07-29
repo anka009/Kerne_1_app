@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 import streamlit as st
 
-st.title("🧩 Konturen anzeigen")
+st.title("🧼 Bild ohne Konturen")
 
 uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
 if uploaded_file:
@@ -15,18 +15,21 @@ if uploaded_file:
         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
         image = cv2.imdecode(file_bytes, 1)
 
-    # Vorverarbeitung: Graustufen & Kanten
+    # Graustufen und Kantenerkennung
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5,5), 0)
-    edges = cv2.Canny(blurred, threshold1=50, threshold2=150)
+    edges = cv2.Canny(blurred, 50, 150)
 
     # Konturen finden
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Leeres Bild für Konturen
-    contour_img = np.zeros_like(image)
-    cv2.drawContours(contour_img, contours, -1, (0, 255, 0), 1)
+    # Maske für Konturen erzeugen
+    mask = np.zeros_like(gray)
+    cv2.drawContours(mask, contours, -1, 255, thickness=cv2.FILLED)
 
-    st.image(contour_img, caption="🖼️ Nur Konturen", channels="BGR")
+    # Bildbereiche an Konturen "reparieren"
+    result = cv2.inpaint(image, mask, 3, cv2.INPAINT_TELEA)
+
+    st.image(result, caption="🖼️ Bild ohne sichtbare Konturen", channels="BGR")
 else:
-    st.info("⬆️ Bitte lade ein Bild hoch, um Konturen zu sehen.")
+    st.info("⬆️ Lade bitte ein Bild hoch.")
