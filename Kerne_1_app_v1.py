@@ -36,7 +36,7 @@ def analyze_image(pil_img):
     gray = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
 
-      contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     total_nuclei = 0
     red_nuclei = 0
