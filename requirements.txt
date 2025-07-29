@@ -6,3 +6,4 @@ XlsxWriter
 streamlit
 streamlit-drawable-canvas
 scikit-learn
+scikit-image
