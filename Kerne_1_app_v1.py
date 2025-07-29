@@ -1,53 +1,85 @@
+import streamlit as st
 import cv2
 import numpy as np
-from skimage import measure
-from matplotlib import pyplot as plt
+from PIL import Image
+import tempfile
 
-# 1. Bild laden
-image = cv2.imread('zellkerne.png')
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# 🔬 Zellkernform prüfen (Rundheitskriterium)
+def is_round(contour):
+    area = cv2.contourArea(contour)
+    perimeter = cv2.arcLength(contour, True)
+    if perimeter == 0:
+        return False
+    circularity = 4 * np.pi * (area / (perimeter ** 2))
+    return circularity > 0.6  # Schwellenwert für Rundheit
 
-# 2. Thresholding zur Segmentierung runder Formen
-ret, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
+# 📌 Farbklassifikation nach mittlerem RGB-Wert
+def classify_color(masked_image):
+    mean_color = cv2.mean(masked_image)
+    if mean_color[2] > mean_color[0] + 50:
+        return 'rot'
+    elif mean_color[0] > mean_color[2] + 50:
+        return 'blau'
+    else:
+        return 'unklar'
 
-# 3. Konturen finden
-contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+# 🖼️ Bildanalyse-Funktion
+def analyze_image(pil_img):
+    image = np.array(pil_img)
+    if image.ndim == 2:  # Graustufenbild
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
-# 4. Filter auf runde/geometrisch passende Konturen
-def is_round(cnt):
-    area = cv2.contourArea(cnt)
-    perimeter = cv2.arcLength(cnt, True)
-    if perimeter == 0: return False
-    circularity = 4 * np.pi * (area / (perimeter * perimeter))
-    return circularity > 0.6  # Schwelle für Rundheit
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
 
-kern_count = 0
-kern_mask = np.zeros(gray.shape, dtype=np.uint8)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-for cnt in contours:
-    if is_round(cnt):
-        cv2.drawContours(kern_mask, [cnt], -1, 255, -1)
-        kern_count += 1
+    total_nuclei = 0
+    red_nuclei = 0
+    blue_nuclei = 0
 
-# 5. Farbklassifikation (rot/blau)
-# Beispiel: rote Kerne haben hohen Rotwert > Blauwert
-red_kern_count = 0
-blue_kern_count = 0
-for cnt in contours:
-    mask = np.zeros(gray.shape, dtype=np.uint8)
-    cv2.drawContours(mask, [cnt], -1, 255, -1)
-    mean_color = cv2.mean(image, mask=mask)
-    if mean_color[2] > mean_color[0] + 50:  # R > B deutlich
-        red_kern_count += 1
-    elif mean_color[0] > mean_color[2] + 50:  # B > R deutlich
-        blue_kern_count += 1
+    for cnt in contours:
+        if is_round(cnt):
+            total_nuclei += 1
+            mask = np.zeros(gray.shape, dtype=np.uint8)
+            cv2.drawContours(mask, [cnt], -1, 255, -1)
+            masked_img = cv2.bitwise_and(image, image, mask=mask)
+            color_type = classify_color(masked_img)
+            if color_type == 'rot':
+                red_nuclei += 1
+            elif color_type == 'blau':
+                blue_nuclei += 1
 
-# 6. Prozentanteil berechnen
-total_color_kern = red_kern_count + blue_kern_count
-if total_color_kern > 0:
-    red_percent = red_kern_count / total_color_kern * 100
-    print(f"🔴 Anteil roter Zellkerne: {red_percent:.2f}%")
+    # 📊 Prozent berechnen
+    color_total = red_nuclei + blue_nuclei
+    red_percent = (red_nuclei / color_total) * 100 if color_total else 0
+
+    return {
+        'gesamt': total_nuclei,
+        'rot': red_nuclei,
+        'blau': blue_nuclei,
+        'rot_prozent': round(red_percent, 2)
+    }
+
+# 📥 Streamlit UI
+st.title("🔬 Zellkernanalyse-App")
+uploaded_files = st.file_uploader(
+    "Bilder hochladen (jpg, jpeg, tif, tiff, bmp, png)",
+    type=["jpg", "jpeg", "tif", "tiff", "bmp", "png"],
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    for file in uploaded_files:
+        st.subheader(f"🖼️ {file.name}")
+        img = Image.open(file)
+        st.image(img, caption=f"Originalbild: {file.name}", use_column_width=True)
+
+        results = analyze_image(img)
+
+        st.write(f"🧮 **Gesamtzahl erkannter Zellkerne:** {results['gesamt']}")
+        st.write(f"🔴 **Rote Kerne:** {results['rot']}")
+        st.write(f"🔵 **Blaue Kerne:** {results['blau']}")
+        st.write(f"📊 **Prozentanteil rote Zellkerne:** {results['rot_prozent']}%")
 else:
-    print("Keine farblich klassifizierbaren Kerne gefunden.")
-
-print(f"🟢 Gesamtzahl geometrisch erkannter Zellkerne: {kern_count}")
+    st.info("⬆️ Bitte lade ein oder mehrere Bilder hoch.")
