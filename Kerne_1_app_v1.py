@@ -3,11 +3,13 @@ import cv2
 import numpy as np
 from PIL import Image
 
-# Titel
+gesamt_counter = 0
+farb_counter = {"rot": 0, "blau": 0, "unbekannt": 0}
+
 st.title("🟠 Farbige Kreise erkennen mit HSV und Durchmesser-Regler")
 
-# Bild hochladen (erweitert)
 uploaded_file = st.file_uploader("Lade ein Bild hoch", type=["jpg", "jpeg", "png", "tif", "tiff"])
+
 if uploaded_file:
     # Unterstütze TIFF via PIL
     if uploaded_file.name.lower().endswith((".tif", ".tiff")):
@@ -17,24 +19,23 @@ if uploaded_file:
         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
         image = cv2.imdecode(file_bytes, 1)
 
-    # Helligkeit/Kontrast-Regler
+    # Helligkeit/Kontrast
     alpha = st.slider("Kontrast (α)", 0.5, 3.0, 1.2)
     beta = st.slider("Helligkeit (β)", -100, 100, 20)
-
     adjusted = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
 
     # Graustufen & Blur
     gray = cv2.cvtColor(adjusted, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5,5), 0)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     _, thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)
 
     # Konturen finden
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Regler für Durchmesser
+    # Durchmesser-Regler
     min_radius, max_radius = st.slider("Kreis-Durchmesser (Pixel)", 1, 1000, (30, 300))
 
-    # Farbe auswählen
+    # Farbwahl
     farbwahl = st.selectbox("Zeige nur Kreise mit Farbe:", ["alle", "rot", "blau"])
 
     output = adjusted.copy()
@@ -48,19 +49,31 @@ if uploaded_file:
             return "blau"
         return "unbekannt"
 
-    # Kreise analysieren
     for cnt in contours:
         (x, y), radius = cv2.minEnclosingCircle(cnt)
         if min_radius <= radius <= max_radius:
             x, y, r = int(x), int(y), int(radius)
-            roi = output[y-r:y+r, x-r:x+r]
+            roi = output[y - r:y + r, x - r:x + r]
             if roi.shape[0] > 0 and roi.shape[1] > 0:
                 farbe = classify_color_hsv(roi)
+                farb_counter[farbe] += 1
+                gesamt_counter += 1
+
                 if farbwahl == "alle" or farbe == farbwahl:
                     cv2.circle(output, (x, y), r, (0, 255, 0), 2)
-                    cv2.putText(output, farbe, (x-r, y-r), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
+                    cv2.putText(output, farbe, (x - r, y - r), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-    # Ergebnis anzeigen
+    # Ergebnisse anzeigen
     st.image(output, caption="Erkannte Kreise", channels="BGR")
+    st.subheader("🧮 Kernauszählung (live)")
+
+    for farbe in ["rot", "blau", "unbekannt"]:
+        st.write(f"{farbe.capitalize()}: {farb_counter[farbe]}")
+
+    if gesamt_counter > 0:
+        anteil_rot = 100 * farb_counter["rot"] / gesamt_counter
+        st.write(f"🔴 Anteil roter Kerne: **{anteil_rot:.1f}%**")
+    else:
+        st.write("🔴 Anteil roter Kerne: 0.0%")
 else:
-    st.info("Bitte ein Bild hochladen, um zu starten.")
+    st.info("📂 Bitte ein Bild hochladen, um zu starten.")
