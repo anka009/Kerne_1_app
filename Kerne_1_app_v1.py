@@ -6,11 +6,16 @@ from PIL import Image
 # Titel
 st.title("🟠 Farbige Kreise erkennen mit HSV und Durchmesser-Regler")
 
-# Bild hochladen
-uploaded_file = st.file_uploader("Lade ein Bild hoch", type=["jpg", "jpeg", "png"])
+# Bild hochladen (erweitert)
+uploaded_file = st.file_uploader("Lade ein Bild hoch", type=["jpg", "jpeg", "png", "tif", "tiff"])
 if uploaded_file:
-    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    image = cv2.imdecode(file_bytes, 1)
+    # Unterstütze TIFF via PIL
+    if uploaded_file.name.lower().endswith((".tif", ".tiff")):
+        pil_img = Image.open(uploaded_file).convert("RGB")
+        image = np.array(pil_img)
+    else:
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        image = cv2.imdecode(file_bytes, 1)
 
     # Helligkeit/Kontrast-Regler
     alpha = st.slider("Kontrast (α)", 0.5, 3.0, 1.2)
@@ -55,6 +60,7 @@ if uploaded_file:
                     cv2.circle(output, (x, y), r, (0, 255, 0), 2)
                     cv2.putText(output, farbe, (x-r, y-r), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
 
+    # Ergebnis anzeigen
     st.image(output, caption="Erkannte Kreise", channels="BGR")
 else:
     st.info("Bitte ein Bild hochladen, um zu starten.")
