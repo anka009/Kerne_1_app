@@ -24,6 +24,16 @@ if uploaded_file:
 
     # 🖤 Graustufen-Konvertierung
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # 🎚️ Grauintensitätsfilter
+    min_gray = st.sidebar.slider("Minimale Grauintensität", 0, 255, 0)
+    max_gray = st.sidebar.slider("Maximale Grauintensität", 0, 255, 255)
+
+    # 🧽 Maske basierend auf Grauintensität
+    intensity_mask = cv2.inRange(gray_image, min_gray, max_gray)
+
+    # 🎯 Gefilterte Bildanzeige
+    filtered_image = cv2.bitwise_and(image, image, mask=intensity_mask)
+    st.image(filtered_image, caption="🎯 Gefilterte Grauintensitäten", channels="BGR")
 
     # 📍 Auswahl zwischen Farbbild und Graustufen
     ansicht = st.radio("🔍 Bildanzeige:", ["Farbe", "Graustufen"])
