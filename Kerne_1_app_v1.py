@@ -26,13 +26,17 @@ def classify_color(masked_image):
 # 🖼️ Bildanalyse-Funktion
 def analyze_image(pil_img):
     image = np.array(pil_img)
-    if image.ndim == 2:  # Graustufenbild
+    if image.ndim == 2:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # 👉 Bild verbessern
+    enhanced_image = enhance_contrast_and_brightness(image)
+
+    # 👉 Mit verbessertem Bild weiterarbeiten
+    gray = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
 
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+      contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     total_nuclei = 0
     red_nuclei = 0
