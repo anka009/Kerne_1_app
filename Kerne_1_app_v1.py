@@ -1,16 +1,23 @@
-from streamlit_drawable_canvas import st_canvas
 import streamlit as st
+from streamlit_drawable_canvas import st_canvas
 import cv2
 import numpy as np
 import io
-from PIL import Image
+from PIL import Image, ImageEnhance
 
-uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
+# 🧾 Seiteneinstellungen
+st.set_page_config(page_title="🧽 Bildbearbeitung", layout="centered")
+st.title("🧽 Bildbearbeitung mit Regler, Canvas & ZOI")
+
+# 📤 Upload
+uploaded_file = st.file_uploader("📤 Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
 
 if uploaded_file:
+    # 🧼 Konvertierung
     pil_img = Image.open(uploaded_file).convert("RGB")
+    image_np = np.array(pil_img)
 
-    # Canvas vorbereiten
+    # 🎨 Canvas vorbereiten
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG")
     byte_img = buf.getvalue()
@@ -23,87 +30,39 @@ if uploaded_file:
         height=pil_img.height,
         width=pil_img.width,
         drawing_mode="rect",
-        key="zoi"
+        key="canvas"
     )
 
-    # ✅ canvas_result ist definiert: Jetzt kann man darauf zugreifen
+    # 🎯 Zone of Interest auslesen
     if canvas_result.json_data:
         objects = canvas_result.json_data["objects"]
         if objects:
             obj = objects[-1]
             x, y = int(obj["left"]), int(obj["top"])
             w, h = int(obj["width"]), int(obj["height"])
-            image_np = np.array(pil_img)
             roi = image_np[y:y+h, x:x+w]
-            st.image(roi, caption="🎯 Ausgewählte Zone of Interest (ZOI)")
+            st.image(roi, caption="🎯 Zone of Interest (ZOI)")
 
+    # 🖼️ Anzeige des Originalbilds
+    st.image(image_np, caption="📷 Originalbild")
 
-# 🧭 Seiteneinstellungen
-st.set_page_config(page_title="🧬 Konturen entfernen", layout="centered")
-st.title("🧬 Konturen aus dem Bild entfernen")
+    # 🎛️ Sidebar-Regler
+    st.sidebar.subheader("🎚 Bildregler")
+    brightness = st.sidebar.slider("🌞 Helligkeit", -100, 100, 0)
+    contrast = st.sidebar.slider("🌗 Kontrast", -100, 100, 0)
+    saturation = st.sidebar.slider("🌈 Sättigung", 0.0, 3.0, 1.0)
+    min_gray = st.sidebar.slider("🖤 Minimale Grauintensität", 0, 255, 0)
 
-# 📥 Bildupload
-uploaded_file = st.file_uploader("📤 Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
+    # 🛠️ Bildverarbeitung
+    image = cv2.convertScaleAbs(image_np, alpha=1 + contrast / 100.0, beta=brightness)
+    image_pil = Image.fromarray(image)
+    image_pil = ImageEnhance.Color(image_pil).enhance(saturation)
+    image = np.array(image_pil)
 
-if uploaded_file:
-    # 📷 TIFF-Konvertierung für OpenCV
-    if uploaded_file.name.endswith((".tif", ".tiff")):
-        pil_img = Image.open(uploaded_file).convert("RGB")
-        image = np.array(pil_img)
-    else:
-        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-        image = cv2.imdecode(file_bytes, 1)
+    # 🧊 Graustufen mit Filter
+    gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    filtered_gray = cv2.threshold(gray_image, min_gray, 255, cv2.THRESH_BINARY)[1]
 
-    # 🖼️ Anzeige des Originalbildes
-    st.image(image, caption="📷 Originalbild", channels="BGR")
-
-    # 🖤 Graustufen-Konvertierung
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # 🎚️ Grauintensitätsfilter
-    min_gray = st.sidebar.slider("Minimale Grauintensität", 0, 255, 0)
-    max_gray = st.sidebar.slider("Maximale Grauintensität", 0, 255, 255)
-
-    # 🧽 Maske basierend auf Grauintensität
-    intensity_mask = cv2.inRange(gray_image, min_gray, max_gray)
-
-    # 🎯 Gefilterte Bildanzeige
-    filtered_image = cv2.bitwise_and(image, image, mask=intensity_mask)
-    st.image(filtered_image, caption="🎯 Gefilterte Grauintensitäten", channels="BGR")
-
-    # 📍 Auswahl zwischen Farbbild und Graustufen
-    ansicht = st.radio("🔍 Bildanzeige:", ["Farbe", "Graustufen"])
-    if ansicht == "Farbe":
-        st.image(image, caption="📷 Originalbild", channels="BGR")
-    else:
-        st.image(gray_image, caption="🖤 Graustufenbild", channels="GRAY")
-
-    # ⚙️ Sidebar-Einstellungen
-    st.sidebar.header("🧪 Einstellungen")
-    th1 = st.sidebar.slider("Kanten-Schwelle 1", 0, 255, 50)
-    th2 = st.sidebar.slider("Kanten-Schwelle 2", 0, 255, 150)
-    repair_radius = st.sidebar.slider("Inpaint Radius", 1, 10, 3)
-
-    # 🧼 Vorbereitung zur Konturenentfernung
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, th1, th2)
-
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    mask = np.zeros_like(gray)
-    cv2.drawContours(mask, contours, -1, 255, thickness=cv2.FILLED)
-
-    # 🎯 Konturen entfernen durch Inpainting
-    result = cv2.inpaint(image, mask, repair_radius, cv2.INPAINT_TELEA)
-
-    # 🎛️ Anzeigeauswahl
-    mode = st.radio("🖼️ Anzeige", ["Bild ohne Konturen", "Maske", "Konturenbild"])
-    if mode == "Bild ohne Konturen":
-        st.image(result, caption="✅ Konturen entfernt", channels="BGR")
-    elif mode == "Maske":
-        st.image(mask, caption="🎭 Konturenmaske", channels="GRAY")
-    else:
-        contour_img = np.zeros_like(image)
-        cv2.drawContours(contour_img, contours, -1, (0, 255, 0), 1)
-        st.image(contour_img, caption="📏 Konturendarstellung", channels="BGR")
-else:
-    st.info("⬆️ Bitte lade ein Bild hoch, um loszulegen.")
+    # 📸 Ergebnisanzeige
+    st.image(image, caption="🎨 Bild mit Regler", channels="RGB")
+    st.image(filtered_gray, caption="🖤 Graufilter-Ergebnis", channels="GRAY")
