@@ -15,7 +15,7 @@ if uploaded_file:
     canvas_result = st_canvas(
         fill_color="rgba(255, 0, 0, 0.3)",  # transparentes Rot
         stroke_width=2,
-        background_image=pil_img,
+      
         update_streamlit=True,
         height=image_np.shape[0],
         width=image_np.shape[1],
