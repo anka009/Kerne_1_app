@@ -8,3 +8,4 @@ streamlit-drawable-canvas
 scikit-learn
 scikit-image
 matplotlib
+streamlit-cropper
