@@ -12,16 +12,23 @@ if uploaded_file:
 
     st.write("🔲 Ziehe ein Rechteck über die gewünschte Zone im Bild:")
 
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 0, 0, 0.3)",  # transparentes Rot
-        stroke_width=2,
-      
-        update_streamlit=True,
-        height=image_np.shape[0],
-        width=image_np.shape[1],
-        drawing_mode="rect",
-        key="zoi"
-    )
+import io
+
+# 🧠 PIL-Bild in Bytes konvertieren
+buf = io.BytesIO()
+pil_img.save(buf, format="PNG")
+byte_img = buf.getvalue()
+
+canvas_result = st_canvas(
+    fill_color="rgba(255, 0, 0, 0.3)",
+    stroke_width=2,
+    background_image=Image.open(io.BytesIO(byte_img)),
+    update_streamlit=True,
+    height=pil_img.height,
+    width=pil_img.width,
+    drawing_mode="rect",
+    key="zoi"
+)
 
     if canvas_result.json_data:
         objects = canvas_result.json_data["objects"]
