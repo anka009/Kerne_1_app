@@ -2,18 +2,21 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
-import tempfile
+from streamlit_cropper import st_cropper
 
-# 🔬 Zellkernform prüfen (Rundheitskriterium)
-def is_round(contour):
-    area = cv2.contourArea(contour)
-    perimeter = cv2.arcLength(contour, True)
-    if perimeter == 0:
-        return False
-    circularity = 4 * np.pi * (area / (perimeter ** 2))
-    return circularity > 0.6  # Schwellenwert für Rundheit
+# 🎛️ Regler in Sidebar
+alpha = st.sidebar.slider("Kontrast (alpha)", 0.5, 3.0, 1.5, 0.1)
+beta = st.sidebar.slider("Helligkeit (beta)", -100, 100, 20, 5)
 
-# 📌 Farbklassifikation nach mittlerem RGB-Wert
+# 🔧 Bildverbesserung
+def enhance_contrast_and_brightness(image, alpha, beta):
+    image_np = np.array(image)
+    if image_np.ndim == 2:
+        image_np = cv2.cvtColor(image_np, cv2.COLOR_GRAY2BGR)
+    enhanced = cv2.convertScaleAbs(image_np, alpha=alpha, beta=beta)
+    return enhanced
+
+# 🔵 Farbklassifikation
 def classify_color(masked_image):
     mean_color = cv2.mean(masked_image)
     if mean_color[2] > mean_color[0] + 50:
@@ -23,32 +26,28 @@ def classify_color(masked_image):
     else:
         return 'unklar'
 
-# 🖼️ Bildanalyse-Funktion
-def enhance_contrast_and_brightness(image):
-    # Beispielhafte Kontrast- & Helligkeitsanpassung mit OpenCV
-    alpha = 1.5  # Kontrast
-    beta = 20    # Helligkeit
-    enhanced = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
-    return enhanced
+# 🟢 Rundheitsprüfung
+def is_round(contour):
+    area = cv2.contourArea(contour)
+    perimeter = cv2.arcLength(contour, True)
+    if perimeter == 0:
+        return False
+    circularity = 4 * np.pi * (area / (perimeter ** 2))
+    return circularity > 0.6
 
-def analyze_image(pil_img):
+# 🔬 Hauptanalysefunktion
+def analyze_image(pil_img, alpha, beta):
     image = np.array(pil_img)
     if image.ndim == 2:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
 
-    # 👉 Bild verbessern
-    enhanced_image = enhance_contrast_and_brightness(image)
-
-    # 👉 Mit verbessertem Bild weiterarbeiten
+    enhanced_image = enhance_contrast_and_brightness(image, alpha, beta)
     gray = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    total_nuclei = 0
-    red_nuclei = 0
-    blue_nuclei = 0
-
+    total_nuclei, red_nuclei, blue_nuclei = 0, 0, 0
     for cnt in contours:
         if is_round(cnt):
             total_nuclei += 1
@@ -61,7 +60,6 @@ def analyze_image(pil_img):
             elif color_type == 'blau':
                 blue_nuclei += 1
 
-    # 📊 Prozent berechnen
     color_total = red_nuclei + blue_nuclei
     red_percent = (red_nuclei / color_total) * 100 if color_total else 0
 
@@ -72,25 +70,25 @@ def analyze_image(pil_img):
         'rot_prozent': round(red_percent, 2)
     }
 
-# 📥 Streamlit UI
-st.title("🔬 Zellkernanalyse-App")
-uploaded_files = st.file_uploader(
-    "Bilder hochladen (jpg, jpeg, tif, tiff, bmp, png)",
-    type=["jpg", "jpeg", "tif", "tiff", "bmp", "png"],
-    accept_multiple_files=True
-)
+# 🧪 Streamlit UI
+st.title("🧬 Zellkernanalyse mit ZOI & Optimierung")
 
-if uploaded_files:
-    for file in uploaded_files:
-        st.subheader(f"🖼️ {file.name}")
-        img = Image.open(file)
-        st.image(img, caption=f"Originalbild: {file.name}", use_column_width=True)
+uploaded_file = st.file_uploader("📤 Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff", "bmp"])
+if uploaded_file:
+    img = Image.open(uploaded_file)
+    st.write("📍 Wähle deine Zone of Interest aus:")
+    cropped_img = st_cropper(img, box_color='red', aspect_ratio=None)
 
-        results = analyze_image(img)
+    enhanced_img = enhance_contrast_and_brightness(cropped_img, alpha, beta)
 
-        st.write(f"🧮 **Gesamtzahl erkannter Zellkerne:** {results['gesamt']}")
-        st.write(f"🔴 **Rote Kerne:** {results['rot']}")
-        st.write(f"🔵 **Blaue Kerne:** {results['blau']}")
-        st.write(f"📊 **Prozentanteil rote Zellkerne:** {results['rot_prozent']}%")
+    col1, col2 = st.columns(2)
+    col1.image(cropped_img, caption="Zone of Interest")
+    col2.image(enhanced_img, caption="Optimiert")
+
+    results = analyze_image(cropped_img, alpha, beta)
+    st.write(f"🔢 **Zellkerne gesamt:** {results['gesamt']}")
+    st.write(f"🔴 **Rote Kerne:** {results['rot']}")
+    st.write(f"🔵 **Blaue Kerne:** {results['blau']}")
+    st.write(f"📊 **Anteil rote Zellkerne:** {results['rot_prozent']}%")
 else:
-    st.info("⬆️ Bitte lade ein oder mehrere Bilder hoch.")
+    st.info("⬆️ Bitte lade ein Bild hoch.")
