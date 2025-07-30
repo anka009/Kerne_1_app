@@ -2,7 +2,6 @@ import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
-from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(layout="wide")
 st.title("🔴🟦 Fleckanalyse mit Farberkennung, Korrektur und ROI")
@@ -11,7 +10,6 @@ st.title("🔴🟦 Fleckanalyse mit Farberkennung, Korrektur und ROI")
 farb_counter = {"rot": 0, "blau": 0}
 korrektur_hinzufuegen = []
 korrektur_loeschen = []
-
 
 # Bild hochladen
 uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
@@ -28,16 +26,15 @@ if uploaded_file:
     with col2:
         beta = st.slider("Helligkeit (beta)", -100, 100, 10)
     adjusted = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
-st.subheader("📐 Manuelle ROI-Auswahl")
 
-x = st.slider("X-Position", 0, adjusted.shape[1], adjusted.shape[1] // 4)
-y = st.slider("Y-Position", 0, adjusted.shape[0], adjusted.shape[0] // 4)
-w = st.slider("Breite", 10, adjusted.shape[1] - x, adjusted.shape[1] // 2)
-h = st.slider("Höhe", 10, adjusted.shape[0] - y, adjusted.shape[0] // 2)
-
-roi = adjusted[y:y+h, x:x+w]
-
-st.image(roi, caption="Ausgewählte ROI", use_column_width=True)
+    # Manuelle ROI-Auswahl
+    st.subheader("📐 Manuelle ROI-Auswahl")
+    x = st.slider("X-Position", 0, adjusted.shape[1], adjusted.shape[1] // 4)
+    y = st.slider("Y-Position", 0, adjusted.shape[0], adjusted.shape[0] // 4)
+    w = st.slider("Breite", 10, adjusted.shape[1] - x, adjusted.shape[1] // 2)
+    h = st.slider("Höhe", 10, adjusted.shape[0] - y, adjusted.shape[0] // 2)
+    roi = adjusted[y:y+h, x:x+w]
+    st.image(roi, caption="Ausgewählte ROI", use_column_width=True)
 
     # HSV-Schieberegler
     st.subheader("🎛️ Farbfilter (HSV)")
@@ -63,13 +60,13 @@ st.image(roi, caption="Ausgewählte ROI", use_column_width=True)
     out = adjusted.copy()
 
     for cnt in konturen:
-        (x, y), r = cv2.minEnclosingCircle(cnt)
-        x, y, r = int(x), int(y), int(r)
+        (cx, cy), r = cv2.minEnclosingCircle(cnt)
+        cx, cy, r = int(cx), int(cy), int(r)
         if radius_min <= r <= radius_max:
-            roi = adjusted[y - r:y + r, x - r:x + r]
-            if roi.size == 0:
+            kreis_roi = adjusted[cy - r:cy + r, cx - r:cx + r]
+            if kreis_roi.size == 0:
                 continue
-            roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            roi_hsv = cv2.cvtColor(kreis_roi, cv2.COLOR_BGR2HSV)
             h_mittel = cv2.mean(roi_hsv)[0]
             farbe = "unbekannt"
             if 0 <= h_mittel <= 15 or 160 <= h_mittel <= 180:
@@ -81,8 +78,8 @@ st.image(roi, caption="Ausgewählte ROI", use_column_width=True)
                 farb_counter[farbe] += 1
 
             if farbwahl == "alle" or farbe == farbwahl:
-                cv2.circle(out, (x, y), r, (0, 255, 0), 2)
-                cv2.putText(out, farbe, (x - r, y - r), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                cv2.circle(out, (cx, cy), r, (0, 255, 0), 2)
+                cv2.putText(out, farbe, (cx - r, cy - r), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
     st.image(out, caption="Erkannte Flecken", channels="BGR")
 
@@ -97,5 +94,6 @@ st.image(roi, caption="Ausgewählte ROI", use_column_width=True)
         col3.metric("% Rot", f"{prozent_rot:.1f}%")
     else:
         col3.metric("% Rot", "0.0%")
+
 else:
     st.info("⬆️ Bitte ein Bild hochladen.")
