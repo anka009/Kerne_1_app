@@ -27,15 +27,16 @@ if uploaded_file:
 
     # 🖼️ Canvas zum Zeichnen mit Base64-Hintergrund
     canvas_result = st_canvas(
-        fill_color="rgba(255, 0, 0, 0.3)",
-        stroke_width=2,
-        background_image=img_url,
-        height=pil_img.height,
-        width=pil_img.width,
-        drawing_mode=drawing_mode,
-        key="canvas_key",
-        update_streamlit=True
-    )
+    fill_color="rgba(255, 0, 0, 0.3)",
+    stroke_width=2,
+    background_image=pil_img,  # ← Das echte PIL-Objekt!
+    height=pil_img.height,
+    width=pil_img.width,
+    drawing_mode=drawing_mode,
+    key="canvas_key",
+    update_streamlit=True
+)
+
 
     # 🧭 ZOI analysieren
     if canvas_result.json_data and canvas_result.json_data["objects"]:
