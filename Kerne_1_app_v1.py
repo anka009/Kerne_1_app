@@ -33,10 +33,10 @@ for col_name, default_h in [("rot", 0), ("blau", 100)]:
     with st.sidebar.expander(col_name.capitalize()):
         h1 = st.slider(f"{col_name} H min", 0, 179, default_h)
         h2 = st.slider(f"{col_name} H max", 0, 179, default_h + (20 if col_name=="blau" else 15))
-        s1 = st.slider("S min", 0, 255, 70)
-        s2 = st.slider("S max", 0, 255, 255)
-        v1 = st.slider("V min", 0, 255, 50)
-        v2 = st.slider("V max", 0, 255, 255)
+        s1 = st.slider(f"{col_name} S min", 0, 255, 70)
+        s2 = st.slider(f"{col_name} S max", 0, 255, 255)
+        v1 = st.slider(f"{col_name} V min", 0, 255, 50)
+        v2 = st.slider(f"{col_name} V max", 0, 255, 255)
         settings[col_name] = ((h1,s1,v1), (h2,s2,v2), col_name)
 
 # ZOI & Canvas zeichnen
