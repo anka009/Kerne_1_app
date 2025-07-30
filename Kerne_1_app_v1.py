@@ -12,6 +12,7 @@ farb_counter = {"rot": 0, "blau": 0}
 korrektur_hinzufuegen = []
 korrektur_loeschen = []
 
+
 # Bild hochladen
 uploaded_file = st.file_uploader("Bild hochladen", type=["jpg", "jpeg", "png", "tif", "tiff"])
 if uploaded_file:
