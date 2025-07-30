@@ -81,6 +81,8 @@ if uploaded_file:
     st.image(out, caption="Flecken innerhalb der ROI", channels="BGR")
 
     # Ergebnis-Anzeige
+    farb_counter["unbekannt"] += 1
+
     gesamt = farb_counter["rot"] + farb_counter["blau"]
     st.subheader("📊 Auswertung")
     col4 = st.columns(1)[0]
