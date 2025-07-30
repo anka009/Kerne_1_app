@@ -70,7 +70,7 @@ if uploaded_file:
                 farbe = "rot"
             elif 90 <= h_mittel <= 130:
                 farbe = "blau"
-
+            farb_counter["unbekannt"] += 1
             if farbe in farb_counter:
                 farb_counter[farbe] += 1
 
@@ -81,7 +81,7 @@ if uploaded_file:
     st.image(out, caption="Flecken innerhalb der ROI", channels="BGR")
 
     # Ergebnis-Anzeige
-    farb_counter["unbekannt"] += 1
+    
 
     gesamt = farb_counter["rot"] + farb_counter["blau"]
     st.subheader("📊 Auswertung")
