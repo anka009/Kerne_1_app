@@ -83,6 +83,9 @@ if uploaded_file:
     # Ergebnis-Anzeige
     gesamt = farb_counter["rot"] + farb_counter["blau"]
     st.subheader("📊 Auswertung")
+    col4 = st.columns(1)[0]
+    col4.metric("⚪ Gesamtzahl Kreise", gesamt)
+
     col1, col2, col3 = st.columns(3)
     col1.metric("🔴 Rot", farb_counter["rot"])
     col2.metric("🔵 Blau", farb_counter["blau"])
