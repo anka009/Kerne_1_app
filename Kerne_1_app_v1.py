@@ -4,36 +4,38 @@ import cv2
 import numpy as np
 from PIL import Image
 import io
+import base64
 
 # 🎨 Seitenlayout
 st.set_page_config(page_title="🧬 Fleckenanalyse", layout="centered")
 st.title("🧪 Rote & Blaue Flecken in ZOI erkennen")
 
 # 📤 Bild-Upload
-uploaded_file = st.file_uploader("📷 Bild hochladen", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📷 Bild hochladen", type=["jpg", "jpeg", "tif", "tiff", "png"])
 if uploaded_file:
     pil_img = Image.open(uploaded_file).convert("RGB")
     image_np = np.array(pil_img)
 
+    # 📸 Bild in Base64 konvertieren
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG")
-    buf.seek(0)
+    data = base64.b64encode(buf.getvalue()).decode("utf-8")
+    img_url = f"data:image/png;base64,{data}"
 
     # 🖌️ Zeichenmodus auswählen
     drawing_mode = st.selectbox("🖌️ Zeichenmodus", ["rect", "circle"])
-    
-    # 🖼️ Canvas zum Zeichnen
+
+    # 🖼️ Canvas zum Zeichnen mit Base64-Hintergrund
     canvas_result = st_canvas(
         fill_color="rgba(255, 0, 0, 0.3)",
         stroke_width=2,
-        background_image=pil_img,  # ← Hier statt Image.open(buf)
+        background_image=img_url,
         height=pil_img.height,
         width=pil_img.width,
         drawing_mode=drawing_mode,
         key="canvas_key",
         update_streamlit=True
     )
-
 
     # 🧭 ZOI analysieren
     if canvas_result.json_data and canvas_result.json_data["objects"]:
@@ -72,9 +74,7 @@ if uploaded_file:
         cv2.drawContours(output_roi, contours_blue, -1, (173, 216, 230), 2)  # Hellblau
 
         st.image(output_roi, caption="📍 Flecken in ZOI hervorgehoben")
-
     else:
         st.warning("Bitte zeichne eine Zone of Interest (ZOI) ins Bild.")
-
 else:
     st.info("🔼 Bitte lade ein Bild hoch.")
