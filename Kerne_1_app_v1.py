@@ -17,7 +17,6 @@ if uploaded_file:
     # Bild einlesen
     pil_img = Image.open(uploaded_file).convert("RGB")
     image = np.array(pil_img)
-    image_display = image.copy()
 
     # Helligkeit/Kontrast
     col1, col2 = st.columns(2)
@@ -49,21 +48,19 @@ if uploaded_file:
         vmin = st.slider("V min", 0, 255, 50)
         vmax = st.slider("V max", 0, 255, 255)
 
-    hsv = cv2.cvtColor(adjusted, cv2.COLOR_BGR2HSV)
+    # Analyse nur im ROI
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     maske = cv2.inRange(hsv, (hmin, smin, vmin), (hmax, smax, vmax))
-
-    # Kreise erkennen
     konturen, _ = cv2.findContours(maske, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     radius_min, radius_max = st.slider("Kreisradius (Pixel)", 1, 500, (10, 80))
-
     farbwahl = st.selectbox("Nur diese Farbe anzeigen", ["alle", "rot", "blau"])
-    out = adjusted.copy()
 
+    out = roi.copy()
     for cnt in konturen:
         (cx, cy), r = cv2.minEnclosingCircle(cnt)
         cx, cy, r = int(cx), int(cy), int(r)
         if radius_min <= r <= radius_max:
-            kreis_roi = adjusted[cy - r:cy + r, cx - r:cx + r]
+            kreis_roi = roi[cy - r:cy + r, cx - r:cx + r]
             if kreis_roi.size == 0:
                 continue
             roi_hsv = cv2.cvtColor(kreis_roi, cv2.COLOR_BGR2HSV)
@@ -81,7 +78,7 @@ if uploaded_file:
                 cv2.circle(out, (cx, cy), r, (0, 255, 0), 2)
                 cv2.putText(out, farbe, (cx - r, cy - r), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-    st.image(out, caption="Erkannte Flecken", channels="BGR")
+    st.image(out, caption="Flecken innerhalb der ROI", channels="BGR")
 
     # Ergebnis-Anzeige
     gesamt = farb_counter["rot"] + farb_counter["blau"]
@@ -89,11 +86,7 @@ if uploaded_file:
     col1, col2, col3 = st.columns(3)
     col1.metric("🔴 Rot", farb_counter["rot"])
     col2.metric("🔵 Blau", farb_counter["blau"])
-    if gesamt > 0:
-        prozent_rot = 100 * farb_counter["rot"] / gesamt
-        col3.metric("% Rot", f"{prozent_rot:.1f}%")
-    else:
-        col3.metric("% Rot", "0.0%")
-
+    prozent_rot = 100 * farb_counter["rot"] / gesamt if gesamt > 0 else 0
+    col3.metric("% Rot", f"{prozent_rot:.1f}%")
 else:
     st.info("⬆️ Bitte ein Bild hochladen.")
