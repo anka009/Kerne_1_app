@@ -1,11 +1,6 @@
 streamlit
 opencv-python-headless
 numpy
-pillow
-XlsxWriter
-streamlit
+Pillow
+pandas
 streamlit-drawable-canvas
-scikit-learn
-scikit-image
-matplotlib
-streamlit-cropper
