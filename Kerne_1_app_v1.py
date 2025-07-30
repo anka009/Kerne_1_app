@@ -23,16 +23,17 @@ if uploaded_file:
     drawing_mode = st.selectbox("🖌️ Zeichenmodus", ["rect", "circle"])
     
     # 🖼️ Canvas zum Zeichnen
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 0, 0, 0.3)",
-        stroke_width=2,
-        background_image=Image.open(buf),
-        height=pil_img.height,
-        width=pil_img.width,
-        drawing_mode=drawing_mode,
-        key="canvas_key",
-        update_streamlit=True
-    )
+   canvas_result = st_canvas(
+    fill_color="rgba(255, 0, 0, 0.3)",
+    stroke_width=2,
+    background_image=pil_img,  # ← Hier statt Image.open(buf)
+    height=pil_img.height,
+    width=pil_img.width,
+    drawing_mode=drawing_mode,
+    key="canvas_key",
+    update_streamlit=True
+)
+
 
     # 🧭 ZOI analysieren
     if canvas_result.json_data and canvas_result.json_data["objects"]:
