@@ -27,6 +27,16 @@ if uploaded_file:
     with col2:
         beta = st.slider("Helligkeit (beta)", -100, 100, 10)
     adjusted = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+st.subheader("📐 Manuelle ROI-Auswahl")
+
+x = st.slider("X-Position", 0, adjusted.shape[1], adjusted.shape[1] // 4)
+y = st.slider("Y-Position", 0, adjusted.shape[0], adjusted.shape[0] // 4)
+w = st.slider("Breite", 10, adjusted.shape[1] - x, adjusted.shape[1] // 2)
+h = st.slider("Höhe", 10, adjusted.shape[0] - y, adjusted.shape[0] // 2)
+
+roi = adjusted[y:y+h, x:x+w]
+
+st.image(roi, caption="Ausgewählte ROI", use_column_width=True)
 
     # HSV-Schieberegler
     st.subheader("🎛️ Farbfilter (HSV)")
@@ -41,33 +51,8 @@ if uploaded_file:
         vmin = st.slider("V min", 0, 255, 50)
         vmax = st.slider("V max", 0, 255, 255)
 
-    # ROI-Auswahl via Canvas
-    st.subheader("📍 Region of Interest (ROI) auswählen")
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 0, 0, 0.3)",
-        stroke_width=3,
-        background_image=Image.fromarray(adjusted),
-        update_streamlit=True,
-        height=adjusted.shape[0],
-        width=adjusted.shape[1],
-        drawing_mode="circle",
-        key="roi_canvas"
-    )
-
-    # ROI Maske generieren
-    mask_roi = np.zeros(adjusted.shape[:2], dtype=np.uint8)
-    if canvas_result.json_data and "objects" in canvas_result.json_data:
-        for obj in canvas_result.json_data["objects"]:
-            if obj["type"] == "circle":
-                cx = int(obj["left"] + obj["radius"])
-                cy = int(obj["top"] + obj["radius"])
-                r = int(obj["radius"])
-                cv2.circle(mask_roi, (cx, cy), r, 255, -1)
-
     hsv = cv2.cvtColor(adjusted, cv2.COLOR_BGR2HSV)
     maske = cv2.inRange(hsv, (hmin, smin, vmin), (hmax, smax, vmax))
-    if np.any(mask_roi):
-        maske = cv2.bitwise_and(maske, mask_roi)
 
     # Kreise erkennen
     konturen, _ = cv2.findContours(maske, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
